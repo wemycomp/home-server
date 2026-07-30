@@ -1,4 +1,11 @@
-from aplikace import *
-from aplikace import apps
+"""
+Tento soubor je hlavním spouštěcím souborem, kde se pouze volají funkce z jiných souborů.
+"""
 
-vyber_aplikaci()
+from aplikace import *
+
+apps = vyber_aplikaci()
+
+file()
+if "navidrome" in apps:
+	navidrome()
