@@ -1,5 +1,6 @@
-from asyncio import subprocess
+import subprocess
 import sys
+from pathlib import Path
 from PyQt5 import QtWidgets, QtGui, QtCore
 
 ###########################
@@ -17,13 +18,13 @@ class okno(QtWidgets.QWidget):
         # Datové úložiště pro aplikace napříč stránkami
         self.vybrane_aplikace = []
 
-        self.glance = [] # 0 - port, 1 - config
+        self.glance = [] # 0 - port
         self.homeassistant = [] # 0 - config
         self.immich = [] # 0 - port, 1 - fotky
         self.jellyfin = [] # 0 - port, 1 - filmy, 2 - serialy
-        self.navidrome = [] # 0 - port, 1 - hudba, 2 - username, 3 - password
+        self.navidrome = [] # 0 - port, 1 - hudba
         self.nginx = [] # 0 - port, 1 - config, 2 - letsencrypt
-        self.pihole = [] # 0 - port, 1 - config, 2 - password
+        self.pihole = [] # 0 - port, 1 - password
         self.portainer = [] # 0 - port
         self.vaultwarden = [] # 0 - port, 1 - slozka
         self.wordpress = [] # 0 - port, 1 - slozka
@@ -47,7 +48,7 @@ class okno(QtWidgets.QWidget):
         self.stranka_vaultwarden = vaultwarden(self)
         self.stranka_wordpress = wordpress(self)
 
-        """self.stranka_instalace = instalace(self)"""
+        self.stranka_instalace = instalace(self)
 
         self.mapa_stranek = {
             "Úvod": self.stranka_uvod,
@@ -63,6 +64,7 @@ class okno(QtWidgets.QWidget):
             "Portainer": self.stranka_portainer,
             "Vaultwarden": self.stranka_vaultwarden,
             "WordPress": self.stranka_wordpress,
+            "Instalace": self.stranka_instalace
         }
 
         # Přidání stránek do StackedWidgetu
@@ -83,13 +85,14 @@ class okno(QtWidgets.QWidget):
         for app in self.vybrane_aplikace:
             if app in self.mapa_stranek:
                 self.aktivni_stranky.append(self.mapa_stranek[app])
+        self.aktivni_stranky.append(self.stranka_instalace)
         
     def dalsi_stranka(self):
         if self.aktualni_index < len(self.aktivni_stranky) - 1:
             self.aktualni_index += 1
             self.okna.setCurrentWidget(self.aktivni_stranky[self.aktualni_index])
         else:
-            QtWidgets.QMessageBox.information(self, "Hotovo", "Konfigurace byla úspěšně dokončena.")
+            QtWidgets.QMessageBox.information(self, "Hotovo", "Instalace byla úspěšně dokončena.")
             QtWidgets.QApplication.quit()
 
     def predchozi_stranka(self):
@@ -446,10 +449,6 @@ class navidrome(sablona):
         self.port=self.vyber_port("4533")
         self.cara()
         self.slozka=self.vyber_slozky1("Vyberte složku s hudbou:", "./hudba")
-        self.cara()
-        self.username=self.vyber_username()
-        self.cara()
-        self.password=self.vyber_password()
 
         # Spodní navigační tlačítka
         self.tlacitka(
@@ -462,8 +461,6 @@ class navidrome(sablona):
         self.mainw.navidrome = [
             self.ziskej_port(),
             self.slozka1,
-            self.ziskej_username(),
-            self.ziskej_password()
         ]
         print(self.mainw.navidrome)
         self.mainw.dalsi_stranka()
@@ -542,7 +539,6 @@ class pihole(sablona):
         self.cara()
         self.vyber_port("82")
         self.cara()
-        self.vyber_slozky1("Vyberte složku pro ukládání konfigurace:", "./pihole")
         self.vyber_password()
 
         # Spodní navigační tlačítka
@@ -554,7 +550,6 @@ class pihole(sablona):
     def dalsi(self):
         self.mainw.pihole = [
             self.ziskej_port(),
-            self.slozka1,
             self.ziskej_password()
         ]
         print(self.mainw.pihole)
@@ -595,7 +590,6 @@ class glance(sablona):
         self.cara()
         self.vyber_port("83")
         self.cara()
-        self.vyber_slozky1("Vyberte složku pro ukládání konfigurace:", "./glance")
 
         # Spodní navigační tlačítka
         self.tlacitka(
@@ -606,7 +600,6 @@ class glance(sablona):
     def dalsi(self):
         self.mainw.glance = [
             self.ziskej_port(),
-            self.slozka1
         ]
         print(self.mainw.glance)
         self.mainw.dalsi_stranka()
@@ -634,48 +627,136 @@ class wordpress(sablona):
         print(self.mainw.wordpress)
         self.mainw.dalsi_stranka()
 
-
-"""class instalace(sablona):
+class instalace(sablona):
     def __init__(self, mainw):
         super().__init__(mainw)
-        
-        nadpis = QtWidgets.QLabel("Instalace a konfigurace")
-        nadpis.setFont(QtGui.QFont("Arial", 12, QtGui.QFont.Bold))
-        self.obsah_layout.addWidget(nadpis)
+
+        self.nadpis("Instalace aplikací")
+        self.cara()
+        info = QtWidgets.QLabel("Po zahájení instalace již nebude možnost měnit vybrané aplikace.")
+        self.obsah_layout.addWidget(info)
+
+        self.vystup = QtWidgets.QPlainTextEdit()
+        self.vystup.setReadOnly(True)
+        self.obsah_layout.addWidget(self.vystup)
 
         docker_check = subprocess.run(["docker", "--version"], capture_output=True, text=True)
         if docker_check.returncode != 0:
             QtWidgets.QMessageBox.critical(self, "Chyba", "Docker není nainstalován. Prosím nainstalujte Docker a zkuste to znovu.")
             return False
-        return True
+
+        tlacitka = QtWidgets.QHBoxLayout()
+        tlacitka.addStretch()
+        self.btn_zpet = QtWidgets.QPushButton("Zpět")
+        self.btn_zpet.clicked.connect(self.mainw.predchozi_stranka)
+        tlacitka.addWidget(self.btn_zpet)
+        self.btn_dalsi = QtWidgets.QPushButton("Instalovat")
+        self.btn_dalsi.clicked.connect(self.spustit_instalaci)
+        tlacitka.addWidget(self.btn_dalsi)
+        self.main_layout.addLayout(tlacitka)
+
+        self.proces = None
+        self.dialog = None
+
+    def spustit_instalaci(self):
+        if self.proces is not None and self.proces.state() != QtCore.QProcess.NotRunning:
+            return
+
+        self.btn_zpet.setEnabled(False)
+        self.btn_dalsi.setEnabled(False)
+        self.vystup.clear()
+
+        self.env_file()
+        self.compose_file()
+
+        self.proces = QtCore.QProcess(self)
+        self.proces.setProcessChannelMode(QtCore.QProcess.MergedChannels)
+        self.proces.readyReadStandardOutput.connect(self.cti_vystup)
+        self.proces.finished.connect(self.instalace_dokoncena)
+        self.proces.start("docker", ["compose", "up", "-d"]) # QProcess.start(program, argumenty)
+
+    def cti_vystup(self):
+        vystup = bytes(self.proces.readAllStandardOutput()).decode("utf-8", errors="replace")
+        if vystup:
+            self.vystup.appendPlainText(vystup.rstrip())
+
+    def instalace_dokoncena(self, kod, stav):
+        self.cti_vystup()
+        if kod == 0:
+            self.vystup.appendPlainText("\nInstalace byla úspěšně dokončena.")
+        else:
+            self.vystup.appendPlainText(f"\nInstalace selhala (kód {kod}).")
+        self.btn_dalsi.setText("Dokončit")
+        self.btn_dalsi.setEnabled(True)
+        self.btn_dalsi.clicked.disconnect(self.spustit_instalaci)
+        self.btn_dalsi.clicked.connect(self.mainw.dalsi_stranka)
 
     def compose_file(self):
         # Vytvoření docker-compose.yml souboru
         with open("docker-compose.yml", "w") as f:
             f.write("services:\n")
             for app in self.mainw.vybrane_aplikace:
-                if app == "Navidrome":
-                    f.write(f"  navidrome:\n    image: deluan/navidrome\n    ports:\n      - {self.mainw.navidrome[1]}:4533\n")
-                elif app == "Jellyfin":
-                    f.write(f"  jellyfin:\n    image: jellyfin/jellyfin\n    ports:\n      - \"{self.mainw.stranka_jellyfin.port_input.text()}:8096\"\n")
-                elif app == "Vaultwarden":
-                    f.write(f"  vaultwarden:\n    image: vaultwarden/server\n    ports:\n      - \"{self.mainw.stranka_vaultwarden.port_input.text()}:8080\"\n")
-                elif app == "Portainer":
-                    f.write(f"  portainer:\n    image: portainer/portainer-ce\n    ports:\n      - \"{self.mainw.stranka_portainer.port_input.text()}:9000\"\n")
-                elif app == "Immich":
-                    f.write(f"  immich:\n    image: immich/immich-server\n    ports:\n      - \"{self.mainw.stranka_immich.port_input.text()}:2283\"\n")
-                elif app == "Crafty Controller":
-                    f.write(f"  craftycontroller:\n    image: craftycontrol/craftycontrol\n    ports:\n      - \"{self.mainw.stranka_craftycontroller.port_input.text()}:3000\"\n")
-                elif app == "Home Assistant":
-                    f.write(f"  homeassistant:\n    image: homeassistant/home-assistant\n    ports:\n      - \"{self.mainw.stranka_homeassistant.port_input.text()}:8123\"\n")
-                elif app == "Pi-hole":
-                    f.write(f"  pihole:\n    image: pihole/pihole\n    ports:\n      - \"{self.mainw.stranka_pihole.port_input.text()}:80\"\n")
+                if app in self.mainw.vybrane_aplikace:
+                    compose_files = {
+                        "Navidrome": "navidrome.yml",
+                        "Jellyfin": "jellyfin.yml",
+                        "Vaultwarden": "vaultwarden.yml",
+                        "Portainer": "portainer.yml",
+                        "Immich": "immich.yml",
+                        "Home Assistant": "homeassistant.yml",
+                        "Pi-hole": "pihole.yml",
+                        "Glance": "glance.yml",
+                        "WordPress": "wordpress.yml",
+                        "Nginx Proxy Manager": "nginx.yml"
+                    }
+                    with open(compose_files[app], "r", encoding="utf-8") as compose:
+                        f.write(compose.read())
 
-        self.tlacitka(
-            text_dalsi="Ukončit", 
-            akce_dalsi=self.mainw.dalsi_stranka
-        )
-"""
+    def env_file(self):
+        with open(".env", "w") as f:
+            f.write("TZ=Europe/Prague")
+            for app in self.mainw.vybrane_aplikace:
+                if app == "Navidrome":
+                    f.write(f"NAVIDROME_PORT={self.mainw.navidrome[0]}\n")
+                    f.write(f"NAVIDROME_HUDBA={self.mainw.navidrome[1]}\n")
+                    f.write(f"NAVIDROME_USERNAME={self.mainw.navidrome[2]}\n")
+                    f.write(f"NAVIDROME_PASSWORD={self.mainw.navidrome[3]}\n")
+                elif app == "Glance":
+                    f.write(f"GLANCE_PORT={self.mainw.glance[0]}\n")
+                elif app == "Home Assistant":
+                    f.write(f"HOMEASSISTANT_CONFIG={self.mainw.homeassistant[0]}\n")
+                    # port je vzdy 8123
+                elif app == "Immich":
+                    f.write(f"IMMICH_PORT={self.mainw.immich[0]}\n")
+                    f.write(f"IMMICH_UPLOAD_LOCATION={self.mainw.immich[1]}\n")
+                    f.write("IMMICH_DB_DATA_LOCATION=./immich/postgres\n")
+                    f.write("IMMICH_VERSION=v3\n")
+                    f.write("IMMICH_DB_PASSWORD=postgres\n")
+                    f.write("IMMICH_DB_USERNAME=postgres\n")
+                    f.write("IMMICH_DB_DATABASE_NAME=immich\n")
+                elif app == "Jellyfin":
+                    f.write(f"JELLYFIN_PORT={self.mainw.jellyfin[0]}\n")
+                    f.write(f"JELLYFIN_FILMY={self.mainw.jellyfin[1]}\n")
+                    f.write(f"JELLYFIN_SERIALY={self.mainw.jellyfin[2]}\n")
+                elif app == "Nginx Proxy Manager":
+                    f.write(f"NGINX_PORT={self.mainw.nginx[0]}\n")
+                    f.write(f"NGINX_CONFIG={self.mainw.nginx[1]}\n")
+                    f.write(f"NGINX_LETSENCRYPT={self.mainw.nginx[2]}\n")
+                elif app == "Pi-hole":
+                    f.write(f"PIHOLE_PORT={self.mainw.pihole[0]}\n")
+                    f.write(f"PIHOLE_CONFIG={self.mainw.pihole[1]}\n")
+                    f.write(f"PIHOLE_PASSWORD={self.mainw.pihole[2]}\n")
+                elif app == "Portainer":
+                    f.write(f"PORTAINER_PORT={self.mainw.portainer[0]}\n")
+                elif app == "Vaultwarden":
+                    f.write(f"VAULTWARDEN_PORT={self.mainw.vaultwarden[0]}\n")
+                    f.write(f"VAULTWARDEN_SLOZKA={self.mainw.vaultwarden[1]}\n")
+                elif app == "WordPress":
+                    f.write(f"WORDPRESS_PORT={self.mainw.wordpress[0]}\n")
+                    f.write(f"WORDPRESS_SLOZKA={self.mainw.wordpress[1]}\n")
+
+
+
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     app.setWindowIcon(QtGui.QIcon("icon.ico"))

@@ -1,0 +1,11 @@
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: vaultwarden
+    restart: unless-stopped
+    environment:
+      DOMAIN: "https://vw.domain.tld"
+    volumes:
+      - ./vaultwarden/:/data/
+    ports:
+      - ${VAULTWARDEN_PORT}:80
+    env_file: .env

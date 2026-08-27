@@ -1,0 +1,10 @@
+  navidrome:
+    image: deluan/navidrome:latest
+    user: 1000:1000 # should be owner of volumes
+    env_file: .env
+    ports:
+      - ${NAVIDROME_PORT}:4533
+    restart: unless-stopped
+    volumes:
+      - ./navidrome/data:/data
+      - ${NAVIDROME_HUDBA}:/music:ro
