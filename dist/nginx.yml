@@ -1,0 +1,10 @@
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    env_file: .env
+    ports:
+      - "${NGINX_PORT}:81"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "${NGINX_CONFIG}:/data"
+      - "${NGINX_LETSENCRYPT}:/etc/letsencrypt"

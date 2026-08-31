@@ -1,6 +1,7 @@
 import subprocess
 import sys
-from pathlib import Path
+import socket
+# from pathlib import Path
 from PyQt5 import QtWidgets, QtGui, QtCore
 
 ###########################
@@ -565,7 +566,6 @@ class nginx(sablona):
         self.cara()
         self.vyber_slozky1("Vyberte složku pro ukládání konfigurace:", "./nginx/data")
         self.cara()
-        self.vyber_slozky2("Vyberte složku pro ukládání ssl certifikátů:", "./nginx/letsencrypt")
 
         # Spodní navigační tlačítka
         self.tlacitka(
@@ -576,8 +576,8 @@ class nginx(sablona):
     def dalsi(self):
         self.mainw.nginx = [
             self.ziskej_port(),
-            self.slozka1,
-            self.slozka2
+            self.slozka1 + "/config",
+            self.slozka1 + "/letsencrypt"
         ]
         print(self.mainw.nginx)
         self.mainw.dalsi_stranka()
@@ -672,8 +672,8 @@ class instalace(sablona):
         self.proces = QtCore.QProcess(self)
         self.proces.setProcessChannelMode(QtCore.QProcess.MergedChannels)
         self.proces.readyReadStandardOutput.connect(self.cti_vystup)
-        self.proces.finished.connect(self.instalace_dokoncena)
-        self.proces.start("docker", ["compose", "up", "-d"]) # QProcess.start(program, argumenty)
+        self.proces.finished.connect(self.instalace_dokoncena) # ! Vraci 2 promenne !
+        self.proces.start("docker", ["compose", "up", "-d"]) # QProcess.start(program, argumenty) - Predpokladam, ze bude fungovat pouze pro Windows, Linux potrebuje sudo
 
     def cti_vystup(self):
         vystup = bytes(self.proces.readAllStandardOutput()).decode("utf-8", errors="replace")
@@ -684,12 +684,66 @@ class instalace(sablona):
         self.cti_vystup()
         if kod == 0:
             self.vystup.appendPlainText("\nInstalace byla úspěšně dokončena.")
+            self.vytvor_soubor_info()
         else:
             self.vystup.appendPlainText(f"\nInstalace selhala (kód {kod}).")
         self.btn_dalsi.setText("Dokončit")
         self.btn_dalsi.setEnabled(True)
         self.btn_dalsi.clicked.disconnect(self.spustit_instalaci)
         self.btn_dalsi.clicked.connect(self.mainw.dalsi_stranka)
+
+
+    def vytvor_soubor_info(self):
+        hostname = socket.gethostname()
+        ip = socket.gethostbyname(hostname)
+
+        with open("info.txt", "w") as f:
+            f.write("Informace o vybraných kontejnerech\n")
+
+            for app in self.mainw.vybrane_aplikace:
+                
+                port = None
+                uzivatel = None
+                heslo = None
+
+                if app == "Glance":
+                    port = self.mainw.glance[0]
+                elif app == "Home Assistant":
+                    port = "8123"
+                elif app == "Immich":
+                    port = self.mainw.immich[0]
+                    slozka = self.mainw.immich[1]
+                elif app == "Jellyfin":
+                    port = self.mainw.jellyfin[0]
+                    slozka = "Filmy: " + self.mainw.jellyfin[1] + ", Seriály: " + self.mainw.jellyfin[2]
+                elif app == "Navidrome":
+                    port = self.mainw.navidrome[0]
+                elif app == "Nginx Proxy Manager":
+                    port = self.mainw.nginx[0]
+                elif app == "Pi-hole":
+                    port = self.mainw.pihole[0]
+                    heslo = self.mainw.pihole[1]
+                elif app == "Portainer":
+                    port = self.mainw.portainer[0]
+                elif app == "Vaultwarden":
+                    port = self.mainw.vaultwarden[0]
+                    slozka = self.mainw.vaultwarden[1]
+                elif app == "WordPress":
+                    port = self.mainw.wordpress[0]
+                    slozka = self.mainw.wordpress[1]
+
+                f.write(f"Název: {app}\n")
+
+                if port is not None:
+                    f.write(f"Adresa: http://{ip}:{port}\n")
+                if slozka is not None:
+                    f.write(f"Složka: {slozka}")
+                if uzivatel is not None:
+                    f.write(f"Přihlašovací jméno: {uzivatel}\n")
+                if heslo is not None:
+                    f.write(f"Heslo: {heslo}\n")
+
+        self.vystup.appendPlainText("\nSoubor s informacemi: info.txt")
 
     def compose_file(self):
         # Vytvoření docker-compose.yml souboru
@@ -714,7 +768,7 @@ class instalace(sablona):
 
     def env_file(self):
         with open(".env", "w") as f:
-            f.write("TZ=Europe/Prague")
+            f.write("TZ=Europe/Prague\n")
             for app in self.mainw.vybrane_aplikace:
                 if app == "Navidrome":
                     f.write(f"NAVIDROME_PORT={self.mainw.navidrome[0]}\n")
