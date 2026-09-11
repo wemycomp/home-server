@@ -765,7 +765,15 @@ class instalace(sablona):
                     }
                     with open(compose_files[app], "r", encoding="utf-8") as compose:
                         f.write(compose.read())
-
+            
+            if "Portainer" in self.mainw.vybrane_aplikace:
+                f.write("networks:\n")
+                f.write("  default:\n")
+                f.write("    name: portainer_network\n")
+        if "Glance" in self.mainw.vybrane_aplikace:
+            self.proces = QtCore.QProcess(self)
+            self.proces.start("mkdir", ["-p", "./glance/config"])
+            self.proces.start("cp", ["glance_config.yml", "./glance/config/glance.yml"])
     def env_file(self):
         with open(".env", "w") as f:
             f.write("TZ=Europe/Prague\n")
@@ -773,8 +781,6 @@ class instalace(sablona):
                 if app == "Navidrome":
                     f.write(f"NAVIDROME_PORT={self.mainw.navidrome[0]}\n")
                     f.write(f"NAVIDROME_HUDBA={self.mainw.navidrome[1]}\n")
-                    f.write(f"NAVIDROME_USERNAME={self.mainw.navidrome[2]}\n")
-                    f.write(f"NAVIDROME_PASSWORD={self.mainw.navidrome[3]}\n")
                 elif app == "Glance":
                     f.write(f"GLANCE_PORT={self.mainw.glance[0]}\n")
                 elif app == "Home Assistant":
@@ -798,8 +804,7 @@ class instalace(sablona):
                     f.write(f"NGINX_LETSENCRYPT={self.mainw.nginx[2]}\n")
                 elif app == "Pi-hole":
                     f.write(f"PIHOLE_PORT={self.mainw.pihole[0]}\n")
-                    f.write(f"PIHOLE_CONFIG={self.mainw.pihole[1]}\n")
-                    f.write(f"PIHOLE_PASSWORD={self.mainw.pihole[2]}\n")
+                    f.write(f"PIHOLE_PASSWORD={self.mainw.pihole[1]}\n")
                 elif app == "Portainer":
                     f.write(f"PORTAINER_PORT={self.mainw.portainer[0]}\n")
                 elif app == "Vaultwarden":
