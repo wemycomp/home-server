@@ -1,0 +1,10 @@
+  portainer:
+    container_name: portainer
+    image: portainer/portainer-ce:lts
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./portainer/data:/data
+    ports:
+      - ${PORTAINER_PORT}:9000
+    env_file: .env

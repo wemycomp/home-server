@@ -735,15 +735,15 @@ class instalace(sablona):
                     slozka = self.mainw.wordpress[1]
 
                 f.write(f"Název: {app}\n")
-
                 if port is not None:
                     f.write(f"Adresa: http://{ip}:{port}\n")
                 if slozka is not None:
-                    f.write(f"Složka: {slozka}")
+                    f.write(f"Složka: {slozka}\n")
                 if uzivatel is not None:
                     f.write(f"Přihlašovací jméno: {uzivatel}\n")
                 if heslo is not None:
                     f.write(f"Heslo: {heslo}\n")
+                f.write("\n")
 
         self.vystup.appendPlainText("\nSoubor s informacemi: info.txt")
 
