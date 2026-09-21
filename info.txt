@@ -1,0 +1,4 @@
+Informace o vybraných kontejnerech
+Název: Pi-hole
+Adresa: http://172.17.176.1:82
+Heslo: 123456

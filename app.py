@@ -705,6 +705,7 @@ class instalace(sablona):
                 port = None
                 uzivatel = None
                 heslo = None
+                slozka = None
 
                 if app == "Glance":
                     port = self.mainw.glance[0]
@@ -718,6 +719,7 @@ class instalace(sablona):
                     slozka = "Filmy: " + self.mainw.jellyfin[1] + ", Seriály: " + self.mainw.jellyfin[2]
                 elif app == "Navidrome":
                     port = self.mainw.navidrome[0]
+                    slozka = self.mainw.navidrome[1]
                 elif app == "Nginx Proxy Manager":
                     port = self.mainw.nginx[0]
                 elif app == "Pi-hole":
@@ -763,8 +765,8 @@ class instalace(sablona):
                         "WordPress": "wordpress.yml",
                         "Nginx Proxy Manager": "nginx.yml"
                     }
-                    with open(compose_files[app], "r", encoding="utf-8") as compose:
-                        f.write(compose.read())
+                    with open(compose_files[app], "r", encoding="utf-8") as apps:
+                        f.write(apps.read())
             
             if "Portainer" in self.mainw.vybrane_aplikace:
                 f.write("networks:\n")
